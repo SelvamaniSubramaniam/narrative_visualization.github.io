@@ -1,0 +1,17 @@
+{
+  "North America": [
+    {"country": "United States", "population": 331002651},
+    {"country": "Canada", "population": 37742154},
+    {"country": "Mexico", "population": 128932753}
+  ],
+  "Europe": [
+    {"country": "Germany", "population": 83783942},
+    {"country": "France", "population": 65273511},
+    {"country": "United Kingdom", "population": 67886011}
+  ],
+  "Asia": [
+    {"country": "China", "population": 1439323776},
+    {"country": "India", "population": 1380004385},
+    {"country": "Japan", "population": 126476461}
+  ]
+}
