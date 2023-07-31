@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Week-wise COGS Line Chart</title>
+  <style>
+    /* CSS for the chart container */
+  
+    .chart-container {
+      position: relative;
+      margin: 0 auto;
+      width: 800px; /* Adjust the width as per your preference */
+    }
+
+    #chart {
+      font-family: Arial, sans-serif;
+      border: 1px solid #ccc;
+      padding: 10px;
+      position: relative;
+    }
+    
+    .btn-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }  
+
+    /* CSS for the line chart path */
+    path.line {
+      fill: none;
+      stroke: steelblue;
+      stroke-width: 2;
+    }
+
+    /* CSS for the data point circles */
+    circle.data-point {
+      fill: steelblue;
+
+    /* CSS for the annotation */
+    .annotation {
+      fill: red;
+      font-size: 14px;
+
+    /* CSS for the connector line */
+    .connector-line {
+      fill: none;
+      stroke: red;
+      stroke-width: 1.5;    
+
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+  <h1>A Narrative visualisation on Supermarket sales analysis</h1>
+  <p> We will take you through the analysis of sales through three 
+      different scenes.We are using the dataset of a Supermarket located in Burma,
+      Myanmar. The dataset is obtained from <a href="https://www.
+      kaggle.com/code/akshitmadan/complete-data-analysis-supermarket
+      -dataset">kaggle</a>
+      <ul>Following are the various analysis carried out.
+        <li>Trend of Weekly sales data</li>
+        <li>Analysis of Productline-wise sale distribution</li>
+        <li>Free-form exploration on variables affecting sales</li>
+      </ul>
+  </p>
+  <h2>Trend of Weekly sales data</h2>
+  <div class="chart-container">
+    <div id="chart"></div>
+      <div class ="btn-container">
+        <button onclick="goToSecondScene()">Go to Second Scene</button>
+      </div>
+  </div>
+  <script>
+    // Read the CSV file
+    const csvFileURL = "https://raw.githubusercontent.com/SelvamaniSubramaniam/population.github.io/main/supermarket_sales.csv";
+
+    d3.csv(csvFileURL).then(data => {
+      // Data Preprocessing: Convert date strings to JavaScript Date objects
+      const parseDate = d3.timeParse("%m/%d/%Y");
+      data.forEach(d => {
+        d.Date = parseDate(d.Date);
+        d.Week = `W${d3.timeFormat("%U")(d.Date)}`; // Week number in 'W1', 'W2' format
+      });
+      console.log(data);
+      
+      // Date Grouping: Group data by week and calculate total COGS for each week
+      const dataByWeek = d3.rollup(data, v => d3.sum(v, d => d.cogs), d => d.Week);
+
+      // Convert the grouped data back to an array
+      const weekSalesData = Array.from(dataByWeek, ([week, cogs]) => ({ Week: week, COGS: cogs }));
+
+      console.log(weekSalesData);
+
+      // Set up the SVG container and margins
+      const margin = { top: 70, right: 30, bottom: 70, left: 70 };
+      const width = 800 - margin.left - margin.right;
+      const height = 500 - margin.top - margin.bottom;
+
+      // Create SVG element
+      const svg = d3
+        .select("#chart")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+      // Define x and y scales
+      const x = d3.scaleBand().domain(weekSalesData.map(d => d.Week)).range([0, width]).padding(0.1);
+      const y = d3.scaleLinear().domain([0, d3.max(weekSalesData, d => d.COGS)]).range([height, 0]);
+
+      // Draw x-axis
+      svg
+        .append("g")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(x).tickSizeOuter(0));
+        // .selectAll("text")
+        // .style("text-anchor", "end")
+        // .attr("transform", "rotate(-45)");
+
+      // Draw y-axis
+      svg
+        .append("g")
+        .call(d3.axisLeft(y));
+
+      // Draw the line chart
+      const line = d3
+        .line()
+        .x(d => x(d.Week) + x.bandwidth() / 2)
+        .y(d => y(d.COGS));
+
+        const productSalesData = {
+            W09:{
+                    "Electronic Accessories": 6688.33,
+                    "Fashion Accessories": 4669.99,
+                    "Food and Beverage": 4664.38,
+                    "Health and Beauty": 4770.62,
+                    "Home and Lifestyle": 4165.24,
+                    "Sports and Travel": 2869.74,
+                },};
+
+      // Find the data point with the highest COGS value
+      const highestSalesData = weekSalesData.reduce((max, d) => (d.COGS > max.COGS ? d : max));
+      console.log(highestSalesData)
+
+      //Draw the line chart path
+      svg
+        .append("path")
+        .datum(weekSalesData)
+        .attr("class", "line")
+        .attr("d", line);
+
+      // Draw data point circles
+     svg
+        .selectAll(".data-point")
+        .data(weekSalesData)
+        .enter()
+        .append("circle")
+        .attr("class", "data-point")
+        .attr("cx", d => x(d.Week) + x.bandwidth() / 2)
+        .attr("cy", d => y(d.COGS))
+        .attr("r", 5);
+
+      // Add x-axis label
+      svg
+        .append("text")
+        .attr("x", width / 2)
+        .attr("y", height + margin.bottom / 2)
+        .attr("text-anchor", "middle")
+        .text("Week-wise distribution");
+
+     // Add y-axis label
+      svg
+        .append("text")
+        .attr("x", -(height / 2))
+        .attr("y", -margin.left + 20)
+        .attr("text-anchor", "middle")
+        .attr("transform", "rotate(-90)")
+        .text("COGS");
+
+      // Add chart title
+      svg
+        .append("text")
+        .attr("x", width / 2)
+        .attr("y", -margin.top / 2)
+        .attr("text-anchor", "middle")
+        .style("font-size", "18px")
+        .text("Week-wise COGS Line Chart");
+
+      svg.append("path").datum(weekSalesData).attr("fill", "none").attr("stroke", "steelblue").attr("d", line);
+     
+      // Add annotation for the highest sales
+      svg
+        .append("circle")
+        .attr("class", "annotation")
+        .attr("cx", x(highestSalesData.Week) + x.bandwidth() / 2)
+        .attr("cy", y(highestSalesData.COGS))
+        .attr("r", 8);
+
+      svg
+        .append("text")
+        .attr("class", "annotation")
+        .attr("x", x(highestSalesData.Week) + x.bandwidth() / 2 + 10)
+        .attr("y", y(highestSalesData.COGS) - 10)
+        .text("Highest Sales");
+
+      // Add connector line
+      svg
+        .append("line")
+        .attr("class", "connector-line")
+        .attr("x1", x(highestSalesData.Week) + x.bandwidth() / 2)
+        .attr("y1", y(highestSalesData.COGS))
+        .attr("x2", width/2)
+        .attr("y2", height/2); // Adjust the vertical position of the connector line      
+    //     //.attr("stroke-dasharray", "5,5");
+
+      // Add annotation message
+    //   svg
+    //     .append("text")
+    //     .attr("class", "annotation")
+    //     .attr("x", width / 2)
+    //     .attr("y", height + margin.top + 30)
+    //     .attr("text-anchor", "middle")
+    //     .text(`Total sale value at this highest point, contribution percentage of each product line to the COGS:`);
+
+    //     const productLines = Object.keys(highestSalesData).filter(key => key !== "Week" && key !== "COGS");
+
+    //     const annotationMessage = productLines
+    //         .map(product => {
+    //             const contributionPercentage = (highestSalesData[product] / highestSalesData.COGS) * 100;
+    //             return `${product}: ${contributionPercentage.toFixed(2)}%`;
+    //             })
+    //         .join(", ");
+    //     svg
+    //         .append("text")
+    //         .attr("class", "annotation")
+    //         .attr("x", width / 2)
+    //         .attr("y", height + margin.top + 50)
+    //         .attr("text-anchor", "middle")
+    //         .text(`Total sale value at this highest point, contribution percentage of each product line to the COGS: ${annotationMessage}`);
+    
+      // Add hard-coded annotation message
+        //const annotationMessage = `Total sale value is ${highestSalesData.COGS.toFixed(2)}.\nElectronic Accessories: 24.03%;\nFashion Accessories: 16.78%;\nFood and Beverage: 16.76%;\nHealth and Beauty: 17.14%;\nHome and Lifestyle: 14.97%;\nSports and Travel: 10.31%;`;
+        const annotationMessage = `Total sale value is ${highestSalesData.COGS.toFixed(2)}.\nElectronic Accessories: 24.03%;\nFashion Accessories: 16.78%;\nFood and Beverage: 16.76%;\nHealth and Beauty: 17.14%;\nHome and Lifestyle: 14.97%;\nSports and Travel: 10.31%;`;
+
+const annotationContainer = svg.append("g").attr("class", "annotation");
+
+annotationContainer
+  .append("rect")
+  .attr("x", width / 2 - 125)
+  .attr("y", height / 2 - 40)
+  .attr("width", 250)
+  .attr("height", 180)
+  .attr("fill", "white")
+  .attr("stroke", "black");
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2 - 20)
+  .attr("text-anchor", "middle")
+  .style("font-weight", "bold")
+  .text("Annotation");
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2 + 15)
+  .attr("text-anchor", "middle")
+  .attr("dy", "-1em")
+  .text(`Highest sale value is ${highestSalesData.COGS.toFixed(2)}.`);
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2)
+  .attr("text-anchor", "middle")
+  .attr("dy", "1em")
+  .text("Electronic Accessories: 24.03%");
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2)
+  .attr("text-anchor", "middle")
+  .attr("dy", "2em")
+  .text("Fashion Accessories: 16.78%");
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2)
+  .attr("text-anchor", "middle")
+  .attr("dy", "3em")
+  .text("Food and Beverage: 16.76%");
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2)
+  .attr("text-anchor", "middle")
+  .attr("dy", "4em")
+  .text("Health and Beauty: 17.14%");
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2)
+  .attr("text-anchor", "middle")
+  .attr("dy", "5em")
+  .text("Home and Lifestyle: 14.97%");
+
+annotationContainer
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height / 2)
+  .attr("text-anchor", "middle")
+  .attr("dy", "6em")
+  .text("Sports and Travel: 10.31%");
+    });
+
+    function goToSecondScene() {
+      window.location.href = "Supermarket_barchart.html"; // Replace "barChart.html" with the correct path to your second scene (barChart.html) file
+    }
+
+// Load the initial chart content into the chartContent div
+document.getElementById("chartContent").innerHTML = chartContentHTML;
+
+  </script>
+</body>
+</html>
