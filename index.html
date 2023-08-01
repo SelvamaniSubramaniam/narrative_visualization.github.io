@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Week-wise COGS Line Chart</title>
+  <style>
+    /* CSS for the chart container */
+
+    body {
+    margin: 0;
+    padding: 0;
+    background-image: url('https://media.istockphoto.com/id/1257043592/photo/black-shopping-basket-on-black-background.jpg?s=612x612&w=0&k=20&c=GWuNHR_GEds3RbXygpUAeNEndmDzsfOkx3ZjiaHsXyM=');
+    background-size: cover;
+    background-color: rgba(0, 0, 0, 1);
+    font-family: Arial, sans-serif;
+    color: white;
+    }
+
+    a{
+      color:white;
+    }
+
+    .chart-container {
+      position: relative;
+      margin: 0 auto;
+      width: 800px;
+    }
+
+
+    #chart {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      position: relative;
+    }
+    
+    .btn-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }  
+
+    /* CSS for the line chart path */
+    path.line {
+      fill:none;
+      stroke: rgb(145, 43, 43);
+      stroke-width: 2;
+    }
+
+    /* CSS for the data point circles */
+    circle.data-point {
+      fill: yellow;
+
+    /* CSS for the annotation */
+    .annotation {
+      fill: red;
+      font-size: 14px;
+
+    /* CSS for the connector line */
+    .connector-line {
+      fill: none;
+      stroke: red;
+      stroke-width: 1.5; 
+      
+    
+      
+    .annotation text {
+    fill: lightgoldenrodyellow; /* Change the color to your desired text color */
+    font-size: 14px; /* You can also adjust the font size if needed */
+    /* Add any other text styling properties here */
+    }
+  
+
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"></script>
+
+</head>
+<body>
+  <h1>A Narrative visualisation on Supermarket sales analysis</h1>
+  <p> We will take you through the analysis of sales through three 
+      different scenes.We are using the dataset of a Supermarket located in Burma,
+      Myanmar. The dataset is obtained from kaggle dataset.File can be accessed 
+      <a href="https://github.com/SelvamaniSubramaniam/narrative_visualization.
+      github.io/blob/main/supermarket_sales.csv">here</a>
+      <ul>Following are the various analysis carried out.
+        <li>Trend of Weekly sales data</li>
+        <li>Analysis of Productline-wise sale distribution</li>
+        <li>Free-form exploration on variables affecting sales</li>
+      </ul>
+  </p>
+  <h2>Trend of Weekly sales data</h2>
+  <div class="chart-container">
+    <div id="chart"></div>
+      <div class ="btn-container">
+        <button onclick="goToSecondScene()">Next</button>
+      </div>
+  </div>
+  <script>
+    // Read the CSV file
+    const csvFileURL = "https://raw.githubusercontent.com/SelvamaniSubramaniam/population.github.io/main/supermarket_sales.csv";
+
+    d3.csv(csvFileURL).then(data => {
+      // Data Preprocessing: Convert date strings to JavaScript Date objects
+      const parseDate = d3.timeParse("%m/%d/%Y");
+      data.forEach(d => {
+        d.Date = parseDate(d.Date);
+        d.Week = `W${d3.timeFormat("%U")(d.Date)}`; // Week number in 'W1', 'W2' format
+      });
+      console.log(data);
+      
+      // Date Grouping: Group data by week and calculate total COGS for each week
+      const dataByWeek = d3.rollup(data, v => d3.sum(v, d => d.cogs), d => d.Week);
+      
+      const dataByProduct = d3.rollup(data, v => d3.sum(v, d => d.cogs), d => d.Product);
+
+      // Convert the grouped data back to an array
+      const weekSalesData = Array.from(dataByWeek, ([week, cogs]) => ({ Week: week, COGS: cogs }));
+
+      console.log(weekSalesData);
+
+      // Set up the SVG container and margins
+      const margin = { top: 70, right: 30, bottom: 70, left: 70 };
+      const width = 800 - margin.left - margin.right;
+      const height = 500 - margin.top - margin.bottom;
+
+      // Create SVG element
+      const svg = d3
+        .select("#chart")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+      // Define x and y scales
+      const x = d3.scaleBand().domain(weekSalesData.map(d => d.Week)).range([0, width]).padding(0.1);
+      const y = d3.scaleLinear().domain([0, d3.max(weekSalesData, d => d.COGS)]).range([height, 0]);
+
+      // Draw x-axis
+      svg
+        .append("g")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(x).tickSizeOuter(0));
+
+      // Draw y-axis
+      svg
+        .append("g")
+        .call(d3.axisLeft(y));
+
+      // Draw the line chart
+      const line = d3
+        .line()
+        .x(d => x(d.Week) + x.bandwidth() / 2)
+        .y(d => y(d.COGS));
+
+        const productSalesData = {
+            W09:{
+                    "Electronic Accessories": 6688.33,
+                    "Fashion Accessories": 4669.99,
+                    "Food and Beverage": 4664.38,
+                    "Health and Beauty": 4770.62,
+                    "Home and Lifestyle": 4165.24,
+                    "Sports and Travel": 2869.74,
+                },};
+
+      // Find the data point with the highest COGS value
+      const highestSalesData = weekSalesData.reduce((max, d) => (d.COGS > max.COGS ? d : max));
+      console.log(highestSalesData)
+
+      //Draw the line chart path
+      svg
+        .append("path")
+        .datum(weekSalesData)
+        .attr("class", "line")
+        .attr("d", line);
+
+      // Draw data point circles
+     svg
+        .selectAll(".data-point")
+        .data(weekSalesData)
+        .enter()
+        .append("circle")
+        .attr("class", "data-point")
+        .attr("cx", d => x(d.Week) + x.bandwidth() / 2)
+        .attr("cy", d => y(d.COGS))
+        .attr("r", 5);
+
+      // Add x-axis label
+      svg
+        .append("text")
+        .attr("x", width / 2)
+        .attr("y", height + margin.bottom / 2)
+        .attr("text-anchor", "middle")
+        .text("Week-wise distribution")
+        .attr("fill", "white");
+
+     // Add y-axis label
+      svg
+        .append("text")
+        .attr("x", -(height / 2))
+        .attr("y", -margin.left + 20)
+        .attr("text-anchor", "middle")
+        .attr("transform", "rotate(-90)")
+        .text("COGS")
+        .attr("fill", "white");
+
+      // Add chart title
+      svg
+        .append("text")
+        .attr("x", width / 2)
+        .attr("y", -margin.top / 2)
+        .attr("text-anchor", "middle")
+        .style("font-size", "18px")
+        .text("Week-wise COGS Line Chart")
+        .attr("fill","white");
+
+      svg.append("path").datum(weekSalesData).attr("fill", "none").attr("stroke", "steelblue").attr("d", line);
+
+      // Add connector line
+      svg
+        .append("line")
+        .attr("class", "connector-line")
+        .attr("x1", x(highestSalesData.Week) + x.bandwidth() / 2)
+        .attr("y1", y(highestSalesData.COGS))
+        .attr("x2", width/2)
+        .attr("y2", height/2); // Adjust the vertical position of the connector line      
+        //.append("text")
+    
+
+  const annotationData = [
+      {
+        note: {
+          title: "Highest Sales",
+          label: `Total sale value is $${highestSalesData.COGS.toFixed(2)}`,
+          wrap: 150, // You can adjust the wrap value to break the label into multiple lines if needed
+        },
+        x: x(highestSalesData.Week) + x.bandwidth() / 2,
+        y: y(highestSalesData.COGS),
+        dx: -120,
+        dy: 160,
+        color: "white",
+      },
+    ];
+
+
+    // Create a d3-annotation object and add the annotation to the chart
+    const makeAnnotations = d3.annotation()
+      .type(d3.annotationCallout) // You can use different types of annotations as needed
+      .accessors({
+        x: (d) => x(d.x) + x.bandwidth() / 2,
+        y: (d) => y(d.y),
+      })
+      .annotations(annotationData);
+
+    svg.append("g").call(makeAnnotations); 
+
+    });
+
+    function goToSecondScene() {
+      window.location.href = "scene2.html"; // Replace "barChart.html" with the correct path to your second scene (barChart.html) file
+    }
+    
+  </script>
+</body>
+</html>
