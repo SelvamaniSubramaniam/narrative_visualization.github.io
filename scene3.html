@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Third Scene - Interactive Bar Chart</title>
+  <style>
+   
+   body {
+    margin: 0;
+    padding: 0;
+    background-image: url('https://media.istockphoto.com/id/1257043592/photo/black-shopping-basket-on-black-background.jpg?s=612x612&w=0&k=20&c=GWuNHR_GEds3RbXygpUAeNEndmDzsfOkx3ZjiaHsXyM=');
+    background-size: cover;
+    background-color: rgba(0, 0, 0, 1);
+    font-family: Arial, sans-serif;
+    color: white;
+    }
+  
+    a{
+      color:white;
+    }
+   
+
+  .chart-container {
+    position: relative;
+    margin: 0 auto;
+    width: 800px; /* Adjust the width as per your preference */
+  }
+
+  #chart {
+    font-family: Arial, sans-serif;
+    padding: 10px;
+    position: relative;
+  }
+
+  .btn-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+
+  .bar {
+    fill: rgb(145, 43, 43);
+  }
+
+  /* CSS for the x-axis */
+  .x-axis {
+    font-size: 12px;
+  }
+
+  /* CSS for the y-axis */
+  .y-axis {
+    font-size: 12px;
+  }
+  </style>  
+</head>
+<body>
+    <h1>A Narrative visualisation on Supermarket sales analysis</h1>
+    <p> We will take you through the analysis of sales through three 
+      different scenes.We are using the dataset of a Supermarket located in Burma,
+      Myanmar. The dataset is obtained from kaggle dataset.File can be accessed 
+      <a href="https://github.com/SelvamaniSubramaniam/population.github.io/blob/
+      main/supermarket_sales.csv">here</a>
+        <ul>Following are the various analysis carried out.
+          <li>Trend of Weekly sales data</li>
+          <li>Analysis of Productline-wise sale distribution</li>
+          <li>Free-form exploration on variables affecting sales</li>
+        </ul>
+    </p>
+    <h2>Free-form exploration on variables affecting sales</h2>  
+  <!-- Create a select element for the filter options -->
+  <label for="filter">Select a Filter:</label>
+  <select id="filter">
+    <option value="gender">Gender</option>
+    <option value="time">City</option>
+    <option value="payment">Payment</option>
+    <option value="payment">Branch</option>
+    <option value="payment">Customer type</option>
+  </select>
+
+  <!-- Create a container for the bar chart -->
+  <div class="chart-container">
+    <div id="chart">
+        <div id="chartContainer"></div>
+    <div class="btn-container">    
+        <!-- Create buttons for navigating to the second and first scenes -->
+        <button onclick="goToSecondScene()">Previous</button>
+        <button onclick="goToFirstScene()">Back to start</button>
+    </div>
+  </div>      
+  <!-- Include the D3.js library -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    // Your data and functions for the interactive bar chart (for the third scene)
+    const csvFile = "https://raw.githubusercontent.com/SelvamaniSubramaniam/population.github.io/main/supermarket_sales.csv"; // Replace with the path to your CSV file
+    let data;
+
+    function isValidNumber(value) {
+    return typeof value === "number" && !isNaN(value) && isFinite(value);
+  }
+
+    // Function to load the data from the CSV file and draw the initial bar chart
+    // Function to load the data from the CSV file and draw the initial bar chart
+function drawInitialChart() {
+  d3.csv(csvFile)
+    .then(function (loadedData) {
+      console.log("Original Data:", loadedData);
+
+      if (!loadedData || loadedData.length === 0) {
+        console.error("Error loading data: Empty or undefined data.");
+        return;
+      }
+
+      // Draw the initial bar chart using the default filter ("Gender")
+    data = loadedData;
+
+      // Delay before calling the drawBarChart function to ensure data is ready
+      setTimeout(function () {
+        drawBarChart(data, "Gender");
+      }, 300);
+    })  
+    .catch(function (error) {
+      console.error("Error loading data:", error);
+    });
+}
+
+
+    // Function to draw the bar chart based on the selected filter
+    function drawBarChart(data, filter) {
+      // Remove any existing SVG elements in the chart container
+      d3.select("#chartContainer").selectAll("*").remove();
+
+      const groupedData = d3.rollup(
+       data, // Filter out entries with invalid COGS values
+       (v) => d3.sum(v, (d) => d.cogs), // Aggregation function to calculate the sum of COGS
+       (d) => d[filter] // Grouping key based on the selected filter
+      );
+      
+      
+    //   const groupedData = d3.group(
+    //   data.filter((d) => isValidNumber(d.cogs)), // Filter out entries with invalid COGS values
+    //   (d) => d[filter],
+    //   (d) => d.cogs,
+    //   (values) => d3.sum(values)
+    // );
+
+    // Convert groupedData to an array of objects with properties "key" and "value"
+    const groupedArray = Array.from(groupedData, ([key, value]) => ({ key, value }));
+    
+    console.log("Grouped Data:", groupedArray);
+    
+    
+    const maxCOGSValue = d3.max(groupedArray, (d) => d.value);
+
+    console.log("maxCOGSValue:", maxCOGSValue); 
+
+    // Set up the SVG dimensions
+    const margin = { top: 50, right: 50, bottom: 70, left: 100 };
+    const width = 600 - margin.left - margin.right;
+    const height = 400 - margin.top - margin.bottom;
+
+    // Create the SVG container
+    const svg = d3
+    .select("#chartContainer")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Create the x-axis scale for the categories
+    // const x = d3.scaleBand().domain(categories).range([0, width]).padding(0.1);
+    const x = d3.scaleBand().domain(groupedArray.map(d => d.key)).range([0, width]).padding(0.1);
+
+    // Create the y-axis scale for the COGS values
+    const y = d3.scaleLinear().domain([0, maxCOGSValue]).range([height, 0]);
+
+    // Create the x-axis
+    const xAxis = d3.axisBottom(x);
+
+    // Create the y-axis
+    const yAxis = d3.axisLeft(y).ticks(5);
+
+    // Append the x-axis to the SVG
+    svg
+    .append("g")
+    .attr("class", "x-axis")
+    .attr("transform", `translate(0,${height})`)
+    .call(xAxis);
+
+    // Append the y-axis to the SVG
+    svg.append("g").attr("class", "y-axis").call(yAxis);
+
+    // Append the bars to the SVG
+    svg
+    .selectAll(".bar")
+    .data(groupedData)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", (d) => x(d[0]))
+    .attr("width", x.bandwidth())
+    .attr("y", (d) => y(d[1]))
+    .attr("height", (d) => height - y(d[1]))
+    .attr("fill", "steelblue");
+
+    // Update the chart title based on the selected filter
+    svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", -20)
+    .attr("text-anchor", "middle")
+    .text(`COGS by ${filter}`)
+    .attr("fill","white");
+
+    // Update the x-axis label based on the selected filter
+    svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text(filter.charAt(0).toUpperCase() + filter.slice(1)) // Capitalize the first letter of the filter name
+    .attr("fill","white");
+
+    // Append the y-axis label
+    svg
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -60)
+      .attr("x", -height / 2)
+      .attr("text-anchor", "middle")
+      .text("COGS")
+      .attr("fill","white");
+      
+      
+    // Append the legends for the bars (based on the selected filter)
+    const legend = svg
+      .selectAll(".legend")
+      .data(categories)
+      .enter()
+      .append("g")
+      .attr("class", "legend")
+      .attr("transform", (d, i) => `translate(0,${height + 20 + i * 20})`);
+
+    legend
+      .append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .attr("fill", (d, i) => d3.schemeCategory10[i % 10]);
+
+    legend
+      .append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text((d) => d);  
+
+}
+    
+
+    // Add an event listener to the select element to update the chart when the user selects a filter
+    document.getElementById("filter").addEventListener("change", function () {
+      const selectedFilter = this.options[this.selectedIndex].textContent;
+      console.log("Selected Filter:", selectedFilter);
+      // Redraw the bar chart with the selected filter
+      drawBarChart(data, selectedFilter);
+    });
+
+    // Load the data and draw the initial bar chart when the page loads
+    window.addEventListener("load", drawInitialChart);
+    //drawInitialChart();
+
+    // Function to navigate to the second scene
+    function goToSecondScene() {
+     window.location.href = "scene2.html"; // Replace with the actual path to your second scene HTML file
+    }
+
+    // Function to navigate to the first scene
+    function goToFirstScene() {
+     window.location.href = "index.html"; // Replace with the actual path to your first scene HTML file
+    }
+
+
+  </script>
+</body>
+</html>
